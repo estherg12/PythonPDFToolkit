@@ -72,6 +72,22 @@ def reorder_pdf():
     except Exception as e:
         print(f"Error: {e}")
 
+# 4. COMPRESS PDF
+def compress_pdf():
+    file = pick_file("Select PDF to Compress")
+    if not file: return
+    output = pick_save("Save Compressed PDF")
+    if not output: return
+
+    doc = fitz.open(file)
+    # Garbage=4 cleans unused objects, deflate=True compresses streams
+    doc.save(output, garbage=4, deflate=True, clean=True)
+    doc.close()
+    
+    orig_size = os.path.getsize(file) / 1024
+    new_size = os.path.getsize(output) / 1024
+    print(f"Compressed: {orig_size:.1f} KB -> {new_size:.1f} KB")
+
 def main():
     while True:
         print("\n--- LOCAL SECURE PDF TOOLKIT ---")
