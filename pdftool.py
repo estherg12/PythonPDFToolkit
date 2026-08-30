@@ -219,6 +219,51 @@ def insert_page_numbers():
     doc.close()
     print(f"Added page numbers to: {output}")
 
+# 10. ADD TEXT OR IMAGE OVER PDF
+def add_text_or_image():
+    file = pick_file("Select Base PDF")
+    if not file: return
+    
+    mode = input("Insert (1) Text or (2) Image? (1/2): ").strip()
+    doc = fitz.open(file)
+    total_pages = len(doc)
+    
+    page_target = input(f"Apply to page number (1-{total_pages}) or 'all': ").strip()
+    pages_to_apply = range(total_pages) if page_target.lower() == "all" else [int(page_target) - 1]
+    
+    if mode == "2":
+        img_path = pick_file("Select Image File", [("Image files", "*.png *.jpg *.jpeg *.bmp")])
+        if not img_path: return
+        x = float(input("X coordinate from top-left (e.g., 100): ").strip() or "100")
+        y = float(input("Y coordinate from top-left (e.g., 100): ").strip() or "100")
+        w = float(input("Width (e.g., 150): ").strip() or "150")
+        h = float(input("Height (e.g., 150): ").strip() or "150")
+        rect = fitz.Rect(x, y, x + w, y + h)
+
+        for p_idx in pages_to_apply:
+            if 0 <= p_idx < total_pages:
+                doc[p_idx].insert_image(rect, filename=img_path, overlay=True)
+    else:
+        text = input("Enter text to insert: ")
+        x = float(input("X coordinate (e.g., 100): ").strip() or "100")
+        y = float(input("Y coordinate (e.g., 100): ").strip() or "100")
+        font_size = float(input("Font size (default 12): ").strip() or "12")
+        font_name = input("Font (helv/times/courier, default helv): ").strip() or "helv"
+        opacity = float(input("Opacity (0.1 to 1.0, default 1.0): ").strip() or "1.0")
+        
+        for p_idx in pages_to_apply:
+            if 0 <= p_idx < total_pages:
+                doc[p_idx].insert_text(
+                    fitz.Point(x, y), text, fontsize=font_size, 
+                    fontname=font_name, color=(0, 0, 0), fill_opacity=opacity
+                )
+
+    output = pick_save("Save Modified PDF")
+    if not output: return
+    doc.save(output)
+    doc.close()
+    print(f"Successfully inserted content into: {output}")
+
 def main():
     while True:
         print("\n--- LOCAL SECURE PDF TOOLKIT ---")
@@ -231,6 +276,7 @@ def main():
         print("7. Sign PDF (Digital Certificate)")
         print("8. Delete Pages")
         print("9. Insert Page Numbers")
+        print("10. Add Text or Image")
         print("0. Exit")
         
         choice = input("\nSelect an option: ").strip()
@@ -243,6 +289,7 @@ def main():
         elif choice == "7": sign_pdf()
         elif choice == "8": delete_pages()
         elif choice == "9": insert_page_numbers()
+        elif choice == "10": add_text_or_image()
         elif choice == "0": break
         else: print("Invalid option.")
 
