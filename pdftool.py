@@ -49,6 +49,29 @@ def split_pdf():
             writer.write(f)
     print(f"Split {len(reader.pages)} pages into: {folder}")
 
+# 3. REORDER PAGES
+def reorder_pdf():
+    file = pick_file("Select PDF to Reorder")
+    if not file: return
+    reader = PdfReader(file)
+    total_pages = len(reader.pages)
+    print(f"Total pages: {total_pages}")
+    
+    order_str = input(f"Enter page order separated by commas (1-indexed, e.g. 3,1,2): ")
+    try:
+        order = [int(p.strip()) - 1 for p in order_str.split(",")]
+        writer = PdfWriter()
+        for idx in order:
+            if 0 <= idx < total_pages:
+                writer.add_page(reader.pages[idx])
+        output = pick_save("Save Reordered PDF")
+        if not output: return
+        with open(output, "wb") as f:
+            writer.write(f)
+        print(f"Saved reordered PDF to: {output}")
+    except Exception as e:
+        print(f"Error: {e}")
+
 def main():
     while True:
         print("\n--- LOCAL SECURE PDF TOOLKIT ---")
