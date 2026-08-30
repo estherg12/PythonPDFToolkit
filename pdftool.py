@@ -141,7 +141,7 @@ def compress_pdf():
     output = pick_save("Save Compressed PDF")
     if not output: return
 
-    doc = fitz.open(file)
+    doc = pymupdf.open(file)
     # Garbage=4 cleans unused objects, deflate=True compresses streams
     doc.save(output, garbage=4, deflate=True, clean=True)
     doc.close()
@@ -168,7 +168,7 @@ def compare_pdfs():
     file2 = pick_file("Select Second PDF")
     if not file1 or not file2: return
 
-    doc1, doc2 = fitz.open(file1), fitz.open(file2)
+    doc1, doc2 = pymupdf.open(file1), pymupdf.open(file2)
     max_pages = max(len(doc1), len(doc2))
     diff_found = False
 
@@ -259,7 +259,7 @@ def insert_page_numbers():
     output = pick_save("Save PDF With Page Numbers")
     if not output: return
 
-    doc = fitz.open(file)
+    doc = pymupdf.open(file)
     total = len(doc)
     for i, page in enumerate(doc):
         cur = i + 1
@@ -269,11 +269,11 @@ def insert_page_numbers():
 
         rect = page.rect
         if pos_choice == "2":  # Bottom-Right
-            point = fitz.Point(rect.width - 80, rect.height - 30)
+            point = pymupdf.Point(rect.width - 80, rect.height - 30)
         elif pos_choice == "3":  # Top-Right
-            point = fitz.Point(rect.width - 80, 40)
+            point = pymupdf.Point(rect.width - 80, 40)
         else:  # Bottom-Center
-            point = fitz.Point(rect.width / 2 - 20, rect.height - 30)
+            point = pymupdf.Point(rect.width / 2 - 20, rect.height - 30)
 
         page.insert_text(point, text, fontsize=font_size, fontname=font_name, color=(0, 0, 0))
 
@@ -287,7 +287,7 @@ def add_text_or_image():
     if not file: return
     
     mode = input("Insert (1) Text or (2) Image? (1/2): ").strip()
-    doc = fitz.open(file)
+    doc = pymupdf.open(file)
     total_pages = len(doc)
     
     page_target = input(f"Apply to page number (1-{total_pages}) or 'all': ").strip()
@@ -300,7 +300,7 @@ def add_text_or_image():
         y = float(input("Y coordinate from top-left (e.g., 100): ").strip() or "100")
         w = float(input("Width (e.g., 150): ").strip() or "150")
         h = float(input("Height (e.g., 150): ").strip() or "150")
-        rect = fitz.Rect(x, y, x + w, y + h)
+        rect = pymupdf.Rect(x, y, x + w, y + h)
 
         for p_idx in pages_to_apply:
             if 0 <= p_idx < total_pages:
@@ -316,7 +316,7 @@ def add_text_or_image():
         for p_idx in pages_to_apply:
             if 0 <= p_idx < total_pages:
                 doc[p_idx].insert_text(
-                    fitz.Point(x, y), text, fontsize=font_size, 
+                    pymupdf.Point(x, y), text, fontsize=font_size, 
                     fontname=font_name, color=(0, 0, 0), fill_opacity=opacity
                 )
 
