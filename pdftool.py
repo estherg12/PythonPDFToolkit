@@ -2,7 +2,7 @@ import os
 import tkinter as tk
 from tkinter import filedialog
 from pypdf import PdfReader, PdfWriter
-import fitz  # PyMuPDF
+import pymupdf  # PyMuPDF
 from pdf2docx import Converter
 
 # Hide the root Tkinter window
