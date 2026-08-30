@@ -4,6 +4,7 @@ from tkinter import filedialog
 from pypdf import PdfReader, PdfWriter
 import pymupdf  # PyMuPDF
 from pdf2docx import Converter
+import difflib
 
 # Hide the root Tkinter window
 root = tk.Tk()
@@ -162,25 +163,117 @@ def pdf_to_docx():
     cv.close()
     print(f"Converted to Word: {output}")
 
-# 6. COMPARE PDFS (Highlight text differences)
+# 6. COMPARE PDFS
 def compare_pdfs():
-    file1 = pick_file("Select First PDF")
-    file2 = pick_file("Select Second PDF")
+    file1 = pick_file("Select First PDF (Original / Baseline)")
+    file2 = pick_file("Select Second PDF (Modified / Comparison)")
     if not file1 or not file2: return
 
     doc1, doc2 = pymupdf.open(file1), pymupdf.open(file2)
     max_pages = max(len(doc1), len(doc2))
-    diff_found = False
+    
+    total_differences = 0
+    diff_report = []
 
-    for page_num in range(max_pages):
-        text1 = doc1[page_num].get_text() if page_num < len(doc1) else "[NO PAGE]"
-        text2 = doc2[page_num].get_text() if page_num < len(doc2) else "[NO PAGE]"
-        if text1 != text2:
-            diff_found = True
-            print(f"Difference detected on Page {page_num + 1}")
+    # Prepare an annotated output document based on the second PDF
+    # (or first, if second has fewer pages)
+    annotated_doc = pymupdf.open(file2 if len(doc2) >= len(doc1) else file1)
 
-    if not diff_found:
-        print("Documents have identical text across all pages.")
+    print("\n--- ANALYZING DIFFERENCES ACROSS ALL PAGES ---")
+
+    for page_idx in range(max_pages):
+        page_num = page_idx + 1
+        
+        # Check for missing pages
+        if page_idx >= len(doc1):
+            msg = f"Page {page_num}: Exists only in Document 2 (New Page Added)."
+            print(f"{msg}")
+            diff_report.append(msg)
+            total_differences += 1
+            continue
+        elif page_idx >= len(doc2):
+            msg = f"Page {page_num}: Exists only in Document 1 (Page Removed)."
+            print(f"{msg}")
+            diff_report.append(msg)
+            total_differences += 1
+            continue
+
+        page1 = doc1[page_idx]
+        page2 = doc2[page_idx]
+        annot_page = annotated_doc[page_idx]
+
+        # Extract words: (x0, y0, x1, y1, "word", block_no, line_no, word_no)
+        words1 = page1.get_text("words")
+        words2 = page2.get_text("words")
+
+        text_words1 = [w[4] for w in words1]
+        text_words2 = [w[4] for w in words2]
+
+        matcher = difflib.SequenceMatcher(None, text_words1, text_words2)
+        page_has_diff = False
+
+        for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+            if tag == 'equal':
+                continue
+
+            page_has_diff = True
+            total_differences += 1
+
+            if tag == 'replace':
+                removed = " ".join(text_words1[i1:i2])
+                added = " ".join(text_words2[j1:j2])
+                print(f"Page {page_num} Modified: '{removed}' -> '{added}'")
+                
+                # Highlight modified text in yellow/orange
+                for w_idx in range(j1, j2):
+                    rect = pymupdf.Rect(words2[w_idx][:4])
+                    highlight = annot_page.add_rect_annot(rect)
+                    highlight.set_colors(stroke=(1, 0.5, 0))  # Orange border
+                    highlight.update()
+
+            elif tag == 'delete':
+                removed = " ".join(text_words1[i1:i2])
+                print(f"Page {page_num} Deleted: '{removed}'")
+                
+                # Draw red box indicating where deletion occurred relative to original
+                for w_idx in range(i1, i2):
+                    rect = pymupdf.Rect(words1[w_idx][:4])
+                    highlight = annot_page.add_rect_annot(rect)
+                    highlight.set_colors(stroke=(1, 0, 0))  # Red border
+                    highlight.update()
+
+            elif tag == 'insert':
+                added = " ".join(text_words2[j1:j2])
+                print(f"Page {page_num} Added: '{added}'")
+                
+                # Highlight inserted text in green
+                for w_idx in range(j1, j2):
+                    rect = pymupdf.Rect(words2[w_idx][:4])
+                    highlight = annot_page.add_rect_annot(rect)
+                    highlight.set_colors(stroke=(0, 0.8, 0))  # Green border
+                    highlight.update()
+
+        if not page_has_diff:
+            print(f"Page {page_num}: Identical")
+
+    doc1.close()
+    doc2.close()
+
+    if total_differences == 0:
+        print("\nBoth PDF files are 100% identical. No visual diff generated.")
+        annotated_doc.close()
+    else:
+        print(f"\nTotal difference clusters found: {total_differences}")
+        save_choice = input("Do you want to save a visual highlighted comparison PDF? (y/n, default y): ").strip().lower() or 'y'
+        if save_choice == 'y':
+            out_file = pick_save("Save Highlighted Difference PDF", ".pdf")
+            if out_file:
+                annotated_doc.save(out_file)
+                print(f"Visual diff saved to: {out_file}")
+                print("    - Green boxes: Added text")
+                print("    - Red boxes: Deleted text")
+                print("    - Orange boxes: Modified text")
+        annotated_doc.close()
 
 # 7. SIGN WITH CERTIFICADO DIGITAL (.p12 / .pfx)
 def sign_pdf():
