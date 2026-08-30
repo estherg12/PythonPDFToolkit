@@ -21,8 +21,11 @@ def pick_save(title="Save output as", default_ext=".pdf", filetypes=[("PDF file"
 
 # 1. MERGE PDFs
 def merge_pdfs():
+    print("Select PDFs to merge")
     files = pick_files("Select PDFs to Merge")
     if not files: return
+    print(f"Selected {len(files)} files for merging.")
+    print("Choose output file name and location.")
     output = pick_save("Save Merged PDF", ".pdf")
     if not output: return
 
@@ -37,17 +40,76 @@ def merge_pdfs():
 def split_pdf():
     file = pick_file("Select PDF to Split")
     if not file: return
+    reader = PdfReader(file)
+    total_pages = len(reader.pages)
+    print(f"\nLoaded PDF with {total_pages} total page(s).")
+
+    print("\nSplit Modes:")
+    print("1. All individual pages (1 page per PDF)")
+    print("2. Custom split (choose number of output PDFs and page ranges)")
+    mode = input("Select mode (1/2, default 2): ").strip() or "2"
+
     folder = filedialog.askdirectory(title="Select Output Folder")
     if not folder: return
 
-    reader = PdfReader(file)
-    for i, page in enumerate(reader.pages):
-        writer = PdfWriter()
-        writer.add_page(page)
-        out_path = os.path.join(folder, f"page_{i+1}.pdf")
-        with open(out_path, "wb") as f:
-            writer.write(f)
-    print(f"Split {len(reader.pages)} pages into: {folder}")
+    base_name = os.path.splitext(os.path.basename(file))[0]
+
+    # Helper function to parse inputs like "1-3, 5, 7-9" into 0-indexed integer list
+    def parse_page_range(range_str, max_p):
+        selected = []
+        for part in range_str.split(","):
+            part = part.strip()
+            if "-" in part:
+                start, end = map(int, part.split("-"))
+                selected.extend(range(start - 1, end))
+            elif part:
+                selected.append(int(part) - 1)
+        return [p for p in selected if 0 <= p < max_p]
+
+    if mode == "1":
+        for i, page in enumerate(reader.pages):
+            writer = PdfWriter()
+            writer.add_page(page)
+            out_path = os.path.join(folder, f"{base_name}_page_{i+1}.pdf")
+            with open(out_path, "wb") as f:
+                writer.write(f)
+        print(f"Split into {total_pages} individual files in: {folder}")
+
+    else:
+        try:
+            num_splits = int(input(f"How many output PDFs do you want to create? (2 to {total_pages}): ").strip())
+            if not (1 <= num_splits <= total_pages):
+                print(f"[!] Please enter a number between 1 and {total_pages}.")
+                return
+
+            for i in range(num_splits):
+                print(f"\n--- PDF {i + 1} of {num_splits} ---")
+                range_input = input(f"Enter pages for PDF #{i+1} (e.g., '1-2, 4' or '3'): ").strip()
+                page_indices = parse_page_range(range_input, total_pages)
+
+                if not page_indices:
+                    print(f"No valid pages provided for PDF #{i+1}. Skipping this file.")
+                    continue
+
+                writer = PdfWriter()
+                for idx in page_indices:
+                    writer.add_page(reader.pages[idx])
+
+                out_name = input(f"Enter filename for PDF #{i+1} (default: {base_name}_part_{i+1}.pdf): ").strip()
+                if not out_name:
+                    out_name = f"{base_name}_part_{i+1}.pdf"
+                if not out_name.endswith(".pdf"):
+                    out_name += ".pdf"
+
+                out_path = os.path.join(folder, out_name)
+                with open(out_path, "wb") as f:
+                    writer.write(f)
+                print(f"Created: {out_name} with pages {[p+1 for p in page_indices]}")
+
+            print(f"\nAll parts successfully saved to: {folder}")
+
+        except ValueError as e:
+            print(f"Invalid input: {e}")
 
 # 3. REORDER PAGES
 def reorder_pdf():
