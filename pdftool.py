@@ -279,7 +279,6 @@ def compare_pdfs():
 def sign_pdf():
     from pyhanko.pdf_utils.incremental_writer import IncrementalPdfFileWriter
     from pyhanko.sign import fields, signers
-    from pyhanko.sign.pkcs11 import open_pkcs11_session
     import getpass
 
     pdf_file = pick_file("Select PDF to Sign")
