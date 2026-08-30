@@ -88,6 +88,18 @@ def compress_pdf():
     new_size = os.path.getsize(output) / 1024
     print(f"Compressed: {orig_size:.1f} KB -> {new_size:.1f} KB")
 
+# 5. PDF TO DOCX
+def pdf_to_docx():
+    file = pick_file("Select PDF to Convert")
+    if not file: return
+    output = pick_save("Save Word Document", ".docx", [("Word Document", "*.docx")])
+    if not output: return
+
+    cv = Converter(file)
+    cv.convert(output, start=0, end=None)
+    cv.close()
+    print(f"Converted to Word: {output}")
+
 def main():
     while True:
         print("\n--- LOCAL SECURE PDF TOOLKIT ---")
