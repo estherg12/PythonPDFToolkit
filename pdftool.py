@@ -120,6 +120,41 @@ def compare_pdfs():
     if not diff_found:
         print("Documents have identical text across all pages.")
 
+# 7. SIGN WITH CERTIFICADO DIGITAL (.p12 / .pfx)
+def sign_pdf():
+    from pyhanko.pdf_utils.incremental_writer import IncrementalPdfFileWriter
+    from pyhanko.sign import fields, signers
+    from pyhanko.sign.pkcs11 import open_pkcs11_session
+    import getpass
+
+    pdf_file = pick_file("Select PDF to Sign")
+    if not pdf_file: return
+    cert_file = pick_file("Select Digital Certificate (.p12 / .pfx)", [("Certificates", "*.p12 *.pfx")])
+    if not cert_file: return
+    
+    passphrase = getpass.getpass("Enter Certificate Password: ").encode()
+    output_pdf = pick_save("Save Signed PDF")
+    if not output_pdf: return
+
+    try:
+        signer = signers.load_crypto(
+            key_file=cert_file,
+            passphrase=passphrase
+        )
+        with open(pdf_file, 'rb') as inf:
+            w = IncrementalPdfFileWriter(inf)
+            fields.append_signature_field(
+                w, sig_field_spec=fields.SigFieldSpec(sig_field_name='Signature1')
+            )
+            with open(output_pdf, 'wb') as outf:
+                signers.sign_pdf(
+                    w, signers.PdfSignatureMetadata(field_name='Signature1'),
+                    signer=signer, output=outf
+                )
+        print(f"Document signed securely: {output_pdf}")
+    except Exception as e:
+        print(f"Signing failed: {e}")
+
 def main():
     while True:
         print("\n--- LOCAL SECURE PDF TOOLKIT ---")
