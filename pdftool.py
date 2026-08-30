@@ -100,6 +100,26 @@ def pdf_to_docx():
     cv.close()
     print(f"Converted to Word: {output}")
 
+# 6. COMPARE PDFS (Highlight text differences)
+def compare_pdfs():
+    file1 = pick_file("Select First PDF")
+    file2 = pick_file("Select Second PDF")
+    if not file1 or not file2: return
+
+    doc1, doc2 = fitz.open(file1), fitz.open(file2)
+    max_pages = max(len(doc1), len(doc2))
+    diff_found = False
+
+    for page_num in range(max_pages):
+        text1 = doc1[page_num].get_text() if page_num < len(doc1) else "[NO PAGE]"
+        text2 = doc2[page_num].get_text() if page_num < len(doc2) else "[NO PAGE]"
+        if text1 != text2:
+            diff_found = True
+            print(f"Difference detected on Page {page_num + 1}")
+
+    if not diff_found:
+        print("Documents have identical text across all pages.")
+
 def main():
     while True:
         print("\n--- LOCAL SECURE PDF TOOLKIT ---")
