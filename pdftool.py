@@ -19,6 +19,20 @@ def pick_files(title="Select multiple files", filetypes=[("PDF files", "*.pdf")]
 def pick_save(title="Save output as", default_ext=".pdf", filetypes=[("PDF file", "*.pdf")]):
     return filedialog.asksaveasfilename(title=title, defaultextension=default_ext, filetypes=filetypes)
 
+# 1. MERGE PDFs
+def merge_pdfs():
+    files = pick_files("Select PDFs to Merge")
+    if not files: return
+    output = pick_save("Save Merged PDF", ".pdf")
+    if not output: return
+
+    writer = PdfWriter()
+    for file in files:
+        writer.append(file)
+    with open(output, "wb") as f:
+        writer.write(f)
+    print(f"Successfully merged into: {output}")
+
 def main():
     while True:
         print("\n--- LOCAL SECURE PDF TOOLKIT ---")
