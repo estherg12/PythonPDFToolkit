@@ -1,0 +1,37 @@
+import os
+import tkinter as tk
+from tkinter import filedialog
+from pypdf import PdfReader, PdfWriter
+import fitz  # PyMuPDF
+from pdf2docx import Converter
+
+# Hide the root Tkinter window
+root = tk.Tk()
+root.withdraw()
+root.attributes('-topmost', True)
+
+def main():
+    while True:
+        print("\n--- LOCAL SECURE PDF TOOLKIT ---")
+        print("1. Merge PDFs")
+        print("2. Split PDF")
+        print("3. Reorder Pages")
+        print("4. Compress PDF")
+        print("5. PDF to DOCX")
+        print("6. Compare PDFs")
+        print("7. Sign PDF (Digital Certificate)")
+        print("0. Exit")
+        
+        choice = input("\nSelect an option: ").strip()
+        if choice == "1": merge_pdfs()
+        elif choice == "2": split_pdf()
+        elif choice == "3": reorder_pdf()
+        elif choice == "4": compress_pdf()
+        elif choice == "5": pdf_to_docx()
+        elif choice == "6": compare_pdfs()
+        elif choice == "7": sign_pdf()
+        elif choice == "0": break
+        else: print("[!] Invalid option.")
+
+if __name__ == "__main__":
+    main()
