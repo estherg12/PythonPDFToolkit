@@ -155,6 +155,30 @@ def sign_pdf():
     except Exception as e:
         print(f"Signing failed: {e}")
 
+# 8. DELETE PAGES
+def delete_pages():
+    file = pick_file("Select PDF to Remove Pages From")
+    if not file: return
+    reader = PdfReader(file)
+    total_pages = len(reader.pages)
+    print(f"Total pages: {total_pages}")
+    
+    del_str = input("Enter page numbers to DELETE separated by commas (e.g. 1, 4, 7): ")
+    try:
+        pages_to_delete = {int(p.strip()) - 1 for p in del_str.split(",") if p.strip()}
+        writer = PdfWriter()
+        for i, page in enumerate(reader.pages):
+            if i not in pages_to_delete:
+                writer.add_page(page)
+                
+        output = pick_save("Save PDF Without Deleted Pages")
+        if not output: return
+        with open(output, "wb") as f:
+            writer.write(f)
+        print(f"Saved updated PDF to: {output}")
+    except Exception as e:
+        print(f"Error: {e}")
+
 def main():
     while True:
         print("\n--- LOCAL SECURE PDF TOOLKIT ---")
@@ -165,6 +189,7 @@ def main():
         print("5. PDF to DOCX")
         print("6. Compare PDFs")
         print("7. Sign PDF (Digital Certificate)")
+        print("8. Delete Pages")
         print("0. Exit")
         
         choice = input("\nSelect an option: ").strip()
