@@ -43,10 +43,10 @@ Install all required libraries via `pip`:
 
 ## Quick Start Guide
 
-1. ** Clone or Download the Repository: ** ```git clone [https://github.com/your-username/PythonPDFToolkit.git](https://github.com/your-username/PythonPDFToolkit.git)
+1. **Clone or Download the Repository:** ```git clone [https://github.com/your-username/PythonPDFToolkit.git](https://github.com/your-username/PythonPDFToolkit.git)
 cd PythonPDFToolkit```
-2. ** Run the Application: ** ```python pdftool.py```
-3. ** Usage Workflow: **
+2. **Run the Application:** ```python pdftool.py```
+3. **Usage Workflow:**
    * Select an option from the main numerical menu (0 to 10)
    * When prompted, use the system Explorer dialog to choose your input files
    * If an operation provides a preview (reorder, delete, page numbers) inpect the thumbnail window before typing parameters in the terminal
