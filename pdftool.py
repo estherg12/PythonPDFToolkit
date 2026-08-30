@@ -277,35 +277,64 @@ def compare_pdfs():
 
 # 7. SIGN WITH CERTIFICADO DIGITAL (.p12 / .pfx)
 def sign_pdf():
+    import uuid
+    import getpass
     from pyhanko.pdf_utils.incremental_writer import IncrementalPdfFileWriter
     from pyhanko.sign import fields, signers
-    import getpass
+    from cryptography.hazmat.primitives.serialization import pkcs12
+    from cryptography.hazmat.backends import default_backend
 
     pdf_file = pick_file("Select PDF to Sign")
     if not pdf_file: return
     cert_file = pick_file("Select Digital Certificate (.p12 / .pfx)", [("Certificates", "*.p12 *.pfx")])
     if not cert_file: return
     
-    passphrase = getpass.getpass("Enter Certificate Password: ").encode()
+    password = getpass.getpass("Enter Certificate Password: ").encode()
     output_pdf = pick_save("Save Signed PDF")
     if not output_pdf: return
 
+    pass_bytes = password.encode("utf-8") if password else None
+
     try:
-        signer = signers.load_crypto(
-            key_file=cert_file,
-            passphrase=passphrase
+        with open(cert_file, "rb") as f:
+            pfx_bytes = f.read()
+
+        try:
+            private_key, cert, other_certs = pkcs12.load_key_and_certificates(
+                pfx_bytes, pass_bytes, backend=default_backend()
+            )
+        except Exception:
+            # Fallback for older FNMT/DNIe legacy ciphers (RC2/3DES)
+            from cryptography.hazmat.primitives.serialization.pkcs12 import load_pkcs12
+            p12_obj = load_pkcs12(pfx_bytes, pass_bytes, backend=default_backend())
+            private_key = p12_obj.key
+            cert = p12_obj.cert.certificate if p12_obj.cert else None
+            other_certs = [c.certificate for c in p12_obj.additional_certs] if p12_obj.additional_certs else []
+
+        if private_key is None or cert is None:
+            print("Error: No private key or certificate found in file (wrong password?).")
+            return
+
+        signer = signers.SimpleSigner(
+            signing_cert=cert,
+            signing_key=private_key,
+            cert_registry=other_certs
         )
+
+        sig_field_name = f"Signature_{uuid.uuid4().hex[:6]}"
+
         with open(pdf_file, 'rb') as inf:
             w = IncrementalPdfFileWriter(inf)
             fields.append_signature_field(
-                w, sig_field_spec=fields.SigFieldSpec(sig_field_name='Signature1')
+                w, sig_field_spec=fields.SigFieldSpec(sig_field_name=sig_field_name)
             )
             with open(output_pdf, 'wb') as outf:
                 signers.sign_pdf(
-                    w, signers.PdfSignatureMetadata(field_name='Signature1'),
+                    w, signers.PdfSignatureMetadata(field_name=sig_field_name),
                     signer=signer, output=outf
                 )
         print(f"Document signed securely: {output_pdf}")
+
     except Exception as e:
         print(f"Signing failed: {e}")
 
