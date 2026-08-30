@@ -33,6 +33,22 @@ def merge_pdfs():
         writer.write(f)
     print(f"Successfully merged into: {output}")
 
+# 2. SPLIT PDF
+def split_pdf():
+    file = pick_file("Select PDF to Split")
+    if not file: return
+    folder = filedialog.askdirectory(title="Select Output Folder")
+    if not folder: return
+
+    reader = PdfReader(file)
+    for i, page in enumerate(reader.pages):
+        writer = PdfWriter()
+        writer.add_page(page)
+        out_path = os.path.join(folder, f"page_{i+1}.pdf")
+        with open(out_path, "wb") as f:
+            writer.write(f)
+    print(f"Split {len(reader.pages)} pages into: {folder}")
+
 def main():
     while True:
         print("\n--- LOCAL SECURE PDF TOOLKIT ---")
