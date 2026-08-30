@@ -1,15 +1,74 @@
 import os
 import tkinter as tk
-from tkinter import filedialog
+from tkinter import filedialog, ttk
 from pypdf import PdfReader, PdfWriter
 import pymupdf  # PyMuPDF
 from pdf2docx import Converter
 import difflib
+from PIL import Image, ImageTk
 
 # Hide the root Tkinter window
 root = tk.Tk()
 root.withdraw()
 root.attributes('-topmost', True)
+
+def show_pdf_thumbnails(pdf_path, title="PDF Page Preview"):
+    """
+    Opens a scrollable thumbnail gallery of all pages.
+    Users can inspect page numbers and layout visually.
+    """
+    doc = pymupdf.open(pdf_path)
+    preview_win = tk.Toplevel()
+    preview_win.title(f"{title} - {os.path.basename(pdf_path)}")
+    preview_win.geometry("850x650")
+
+    # Main scrollable canvas setup
+    container = ttk.Frame(preview_win)
+    canvas = tk.Canvas(container, bg="#2e2e2e")
+    scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
+    scroll_frame = ttk.Frame(canvas)
+
+    scroll_frame.bind(
+        "<Configure>",
+        lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+    )
+    canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
+    canvas.configure(yscrollcommand=scrollbar.set)
+
+    container.pack(fill="both", expand=True)
+    canvas.pack(side="left", fill="both", expand=True)
+    scrollbar.pack(side="right", fill="y")
+
+    # Mouse wheel support
+    def _on_mousewheel(event):
+        canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+    canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+    # Render thumbnails in a 3-column grid
+    cols = 3
+    # Keep reference to images to avoid garbage collection
+    preview_win.images = [] 
+
+    for idx, page in enumerate(doc):
+        # Render page to low-res pixmap (zoom ~0.3)
+        pix = page.get_pixmap(matrix=pymupdf.Matrix(0.35, 0.35))
+        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        photo = ImageTk.PhotoImage(img)
+        preview_win.images.append(photo)
+
+        card = ttk.Frame(scroll_frame, padding=10)
+        card.grid(row=idx // cols, column=idx % cols, padx=10, pady=10)
+
+        lbl_img = tk.Label(card, image=photo, relief="groove")
+        lbl_img.pack()
+
+        lbl_text = tk.Label(
+            card, text=f"Page {idx + 1}", font=("Segoe UI", 10, "bold")
+        )
+        lbl_text.pack(pady=4)
+
+    doc.close()
+    return preview_win
 
 def pick_file(title="Select a file", filetypes=[("PDF files", "*.pdf")]):
     return filedialog.askopenfilename(title=title, filetypes=filetypes)
@@ -116,24 +175,29 @@ def split_pdf():
 def reorder_pdf():
     file = pick_file("Select PDF to Reorder")
     if not file: return
+
+    win = show_pdf_thumbnails(file, "Reorder Pages Preview")
+
     reader = PdfReader(file)
     total_pages = len(reader.pages)
     print(f"Total pages: {total_pages}")
     
-    order_str = input(f"Enter page order separated by commas (1-indexed, e.g. 3,1,2): ")
+    order_str = input(f"Review the open window. Enter page order separated by commas (1-indexed, e.g. 3,1,2): ")
     try:
-        order = [int(p.strip()) - 1 for p in order_str.split(",")]
+        order = [int(p.strip()) - 1 for p in order_str.split(",") if p.strip()]
         writer = PdfWriter()
         for idx in order:
             if 0 <= idx < total_pages:
                 writer.add_page(reader.pages[idx])
         output = pick_save("Save Reordered PDF")
-        if not output: return
-        with open(output, "wb") as f:
-            writer.write(f)
-        print(f"Saved reordered PDF to: {output}")
+        if output:
+            with open(output, "wb") as f:
+                writer.write(f)
+            print(f"Saved reordered PDF to: {output}")
     except Exception as e:
         print(f"Error: {e}")
+    finally:
+        win.destroy()
 
 # 4. COMPRESS PDF
 def compress_pdf():
@@ -342,11 +406,14 @@ def sign_pdf():
 def delete_pages():
     file = pick_file("Select PDF to Remove Pages From")
     if not file: return
+
+    win = show_pdf_thumbnails(file, "Delete Pages Preview")
+    
     reader = PdfReader(file)
     total_pages = len(reader.pages)
     print(f"Total pages: {total_pages}")
     
-    del_str = input("Enter page numbers to DELETE separated by commas (e.g. 1, 4, 7): ")
+    del_str = input("Review the open window. Enter page numbers to DELETE separated by commas (e.g. 1, 4, 7): ").strip()
     try:
         pages_to_delete = {int(p.strip()) - 1 for p in del_str.split(",") if p.strip()}
         writer = PdfWriter()
@@ -355,17 +422,21 @@ def delete_pages():
                 writer.add_page(page)
                 
         output = pick_save("Save PDF Without Deleted Pages")
-        if not output: return
-        with open(output, "wb") as f:
-            writer.write(f)
-        print(f"Saved updated PDF to: {output}")
+        if output:
+            with open(output, "wb") as f:
+                writer.write(f)
+            print(f"Saved updated PDF to: {output}")
     except Exception as e:
         print(f"Error: {e}")
+    finally: 
+        win.destroy()
 
 # 9. INSERT PAGE NUMBERS
 def insert_page_numbers():
     file = pick_file("Select PDF to Add Page Numbers")
     if not file: return
+
+    win = show_pdf_thumbnails(file, "Page Numbers Target Preview")
     
     print("\nPosition Options: 1) Bottom-Center  2) Bottom-Right  3) Top-Right")
     pos_choice = input("Select position (default 1): ").strip() or "1"
@@ -378,7 +449,9 @@ def insert_page_numbers():
     font_name = input("Font name (default helv): ").strip() or "helv"
     
     output = pick_save("Save PDF With Page Numbers")
-    if not output: return
+    if not output: 
+        win.destroy()
+        return
 
     doc = pymupdf.open(file)
     total = len(doc)
@@ -400,6 +473,7 @@ def insert_page_numbers():
 
     doc.save(output)
     doc.close()
+    win.destroy()
     print(f"Added page numbers to: {output}")
 
 # 10. ADD TEXT OR IMAGE OVER PDF
