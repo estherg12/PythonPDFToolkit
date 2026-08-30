@@ -10,6 +10,15 @@ root = tk.Tk()
 root.withdraw()
 root.attributes('-topmost', True)
 
+def pick_file(title="Select a file", filetypes=[("PDF files", "*.pdf")]):
+    return filedialog.askopenfilename(title=title, filetypes=filetypes)
+
+def pick_files(title="Select multiple files", filetypes=[("PDF files", "*.pdf")]):
+    return list(filedialog.askopenfilenames(title=title, filetypes=filetypes))
+
+def pick_save(title="Save output as", default_ext=".pdf", filetypes=[("PDF file", "*.pdf")]):
+    return filedialog.asksaveasfilename(title=title, defaultextension=default_ext, filetypes=filetypes)
+
 def main():
     while True:
         print("\n--- LOCAL SECURE PDF TOOLKIT ---")
