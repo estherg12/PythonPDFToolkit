@@ -179,6 +179,46 @@ def delete_pages():
     except Exception as e:
         print(f"Error: {e}")
 
+# 9. INSERT PAGE NUMBERS
+def insert_page_numbers():
+    file = pick_file("Select PDF to Add Page Numbers")
+    if not file: return
+    
+    print("\nPosition Options: 1) Bottom-Center  2) Bottom-Right  3) Top-Right")
+    pos_choice = input("Select position (default 1): ").strip() or "1"
+    
+    print("Format Options: 1) '1'  2) 'Page 1'  3) '1 of N'")
+    fmt_choice = input("Select format (default 3): ").strip() or "3"
+    
+    font_size = float(input("Font size (default 10): ").strip() or "10")
+    print("Standard fonts: helv (Helvetica), times (Times-Roman), courier (Courier)")
+    font_name = input("Font name (default helv): ").strip() or "helv"
+    
+    output = pick_save("Save PDF With Page Numbers")
+    if not output: return
+
+    doc = fitz.open(file)
+    total = len(doc)
+    for i, page in enumerate(doc):
+        cur = i + 1
+        if fmt_choice == "1": text = f"{cur}"
+        elif fmt_choice == "2": text = f"Page {cur}"
+        else: text = f"{cur} of {total}"
+
+        rect = page.rect
+        if pos_choice == "2":  # Bottom-Right
+            point = fitz.Point(rect.width - 80, rect.height - 30)
+        elif pos_choice == "3":  # Top-Right
+            point = fitz.Point(rect.width - 80, 40)
+        else:  # Bottom-Center
+            point = fitz.Point(rect.width / 2 - 20, rect.height - 30)
+
+        page.insert_text(point, text, fontsize=font_size, fontname=font_name, color=(0, 0, 0))
+
+    doc.save(output)
+    doc.close()
+    print(f"Added page numbers to: {output}")
+
 def main():
     while True:
         print("\n--- LOCAL SECURE PDF TOOLKIT ---")
@@ -190,6 +230,7 @@ def main():
         print("6. Compare PDFs")
         print("7. Sign PDF (Digital Certificate)")
         print("8. Delete Pages")
+        print("9. Insert Page Numbers")
         print("0. Exit")
         
         choice = input("\nSelect an option: ").strip()
@@ -200,8 +241,10 @@ def main():
         elif choice == "5": pdf_to_docx()
         elif choice == "6": compare_pdfs()
         elif choice == "7": sign_pdf()
+        elif choice == "8": delete_pages()
+        elif choice == "9": insert_page_numbers()
         elif choice == "0": break
-        else: print("[!] Invalid option.")
+        else: print("Invalid option.")
 
 if __name__ == "__main__":
     main()
